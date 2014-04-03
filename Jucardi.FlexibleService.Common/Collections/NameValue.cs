@@ -45,10 +45,10 @@ namespace Jucardi.FlexibleService.Common.Collections
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="NameValue"/> class.
+		/// Initializes a new instance of the <see cref="NameValue" /> class.
 		/// </summary>
-		/// <param _name="name">The parameter _name.</param>
-		/// <param _name="value">The parameter _value.</param>
+		/// <param name="name">The name.</param>
+		/// <param name="value">The value.</param>
 		public NameValue(string name, object value)
 		{
 			_name  = name;

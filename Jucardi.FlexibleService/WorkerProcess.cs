@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Jucardi.FlexibleService.Common;
+using Jucardi.FlexibleService.Common.Collections;
 using Jucardi.FlexibleService.Common.Extensions;
 using Jucardi.FlexibleService.Common.Log;
 
@@ -48,6 +49,7 @@ namespace Jucardi.FlexibleService
 		public void ExecuteWorker(string file, string klass)
 		{
 			IWorker worker = CreateWorker(file, klass);
+			ConfigureCommonValues(worker);
 			ExecuteWorker(worker);
 		}
 
@@ -59,6 +61,7 @@ namespace Jucardi.FlexibleService
 		{
 			Logger.Info("Creating worker with configuration set {0}", info.Name);
 			IWorker worker = CreateWorker(info.AssemblyPath, info.ClassName);
+			ConfigureCommonValues(worker);
 			info.Configure(worker);
 			ExecuteWorker(worker);
 		}
@@ -97,6 +100,25 @@ namespace Jucardi.FlexibleService
 			{
 				Logger.Info("Stopping worker {0}", worker.Name);
 				worker.Stop();
+			}
+		}
+
+		/// <summary>
+		/// Configures the common values.
+		/// </summary>
+		/// <param name="obj">The object.</param>
+		private void ConfigureCommonValues(object obj)
+		{
+			foreach (NameValue nameValue in FlexibleServiceConfiguration.Configuration.CommonProperties)
+			{
+				try
+				{
+					nameValue.AssignTo(obj);
+				}
+				catch (Exception ex)
+				{
+					Logger.Warn(ex.Message);
+				}
 			}
 		}
 

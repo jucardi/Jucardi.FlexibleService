@@ -5,6 +5,7 @@
 // The use of this code is subject to Open Source License Agreement.
 
 using System;
+using System.Collections.Generic;
 using System.Xml;
 using System.Xml.Serialization;
 using Jucardi.FlexibleService.Common.Collections;
@@ -27,23 +28,38 @@ namespace Jucardi.FlexibleService.Common
 
 		private static FlexibleServiceConfiguration _configuration = new FlexibleServiceConfiguration();
 
-		private ExtensionInfoCollection extensions = null;
-		private XmlElement logger = null;
+		private List<NameValue>         commonProperties = null;
+		private ExtensionInfoCollection extensions       = null;
+		private XmlElement              logger           = null;
 
 		#endregion
 
 		#region Properties
 
 		/// <summary>
-		/// Gets or sets the _configuration.
+		/// Gets or sets the _configurationConfiguration.
 		/// </summary>
 		/// <value>
-		/// The _configuration.
+		/// The Configuration.
 		/// </value>
 		public static FlexibleServiceConfiguration Configuration
 		{
 			get { return _configuration; }
 			set { _configuration = value; }
+		}
+
+		/// <summary>
+		/// Gets or sets the common properties.
+		/// </summary>
+		/// <value>
+		/// The common properties.
+		/// </value>
+		[XmlArray("common-values")]
+		[XmlArrayItem("property")]
+		public List<NameValue> CommonProperties
+		{
+			get { return this.commonProperties; }
+			set { this.commonProperties = value; }
 		}
 
 		/// <summary>
