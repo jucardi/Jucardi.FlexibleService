@@ -17,8 +17,8 @@ namespace Jucardi.FlexibleService.Common.Service
 	{
 		#region Fields
 
-		internal const string SERVICE_NAME       = "Channel Workers Service";
-		internal const string SERVICE_NAME_KEY   = "servicename";
+		internal const string SERVICE_NAME     = "Jucardi Flexible Service";
+		internal const string SERVICE_NAME_KEY = "jucardiFlex";
 
 		#endregion
 
@@ -256,7 +256,7 @@ namespace Jucardi.FlexibleService.Common.Service
 		/// </summary>
 		private static void PrintHelp()
 		{
-			Console.WriteLine("Channel Workers Service");
+			Console.WriteLine(SERVICE_NAME);
 			Console.WriteLine(string.Empty);
 			Console.WriteLine("{0} [/install | /uninstall | /start | /stop | /console | /help] [/config config_file]", Process.GetCurrentProcess().ProcessName);
 			Console.WriteLine(string.Empty);

@@ -8,9 +8,9 @@ using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("Channel.Workers")]
+[assembly: AssemblyTitle("Jucardi.FlexibleService")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyProduct("Channel.Workers")]
+[assembly: AssemblyProduct("Jucardi.FlexibleService")]
 [assembly: ComVisible(false)]
 [assembly: Guid("3fdffb85-d794-41f5-a91c-f635ed222a5e")]
 [assembly: AssemblyVersion("1.0.0.0")]

@@ -154,39 +154,7 @@ namespace Jucardi.FlexibleService.Common.Collections
 			PropertyDescriptorCollection descriptors = TypeDescriptor.GetProperties(objType);
 
 			foreach (NameValue element in this)
-			{
-				PropertyDescriptor descriptor = descriptors[element.Name];
-				object value = null;
-
-				if (descriptor == null)
-					throw new InvalidOperationException(string.Format("The property '{0}' could not be found.", element.Name));
-
-				if (descriptor.IsReadOnly)
-					throw new InvalidOperationException(string.Format("The property '{0}' is read only", element.Name));
-
-				PropertyInfo pinfo = obj.GetType().GetProperty(element.Name);
-
-				if (pinfo == null)
-					throw new InvalidOperationException(string.Format("The property '{0}' could not be found.", element.Name));
-
-				if (!pinfo.CanWrite)
-					throw new InvalidOperationException(string.Format("The property '{0}' is read only", element.Name));
-
-				MethodInfo setMethod = pinfo.GetSetMethod();
-
-				if (setMethod == null || !setMethod.IsPublic)
-					throw new InvalidOperationException(string.Format("The property '{0}' is read only", element.Name));
-
-				object[] attributes = pinfo.GetCustomAttributes(typeof(PropertiesCollectionIgnoreAttribute), true);
-
-				if (attributes.Length > 0)
-					throw new InvalidOperationException(string.Format("The property '{0}' cannot be set via PropertyCollection.", element.Name));
-
-				value = element.ConvertValue(descriptor);
-
-				if (value != null)
-					descriptor.SetValue(obj, value);
-			}
+				element.AssignTo(obj, descriptors);
 		}
 
 		/// <summary>

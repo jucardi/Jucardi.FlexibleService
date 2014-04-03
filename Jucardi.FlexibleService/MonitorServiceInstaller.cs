@@ -18,7 +18,7 @@ namespace Jucardi.FlexibleService.Common.Service
 	public class MonitorServiceInstaller : Installer
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="MonitorServiceInstaller"/> class.
+		/// Initializes a new instance of the <see cref="MonitorServiceInstaller" /> class.
 		/// </summary>
 		public MonitorServiceInstaller()
 		{
@@ -31,8 +31,8 @@ namespace Jucardi.FlexibleService.Common.Service
 			processInstaller.Username = null;
 
 			serviceInstaller.ServiceName = Program.SERVICE_NAME;
-			serviceInstaller.DisplayName = "Channel Worker Service";
-			serviceInstaller.Description = "Channel Worker Service";
+			serviceInstaller.DisplayName = Program.SERVICE_NAME;
+			serviceInstaller.Description = Program.SERVICE_NAME;
 			serviceInstaller.StartType   = ServiceStartMode.Automatic;
 
 			this.Installers.Add(processInstaller);

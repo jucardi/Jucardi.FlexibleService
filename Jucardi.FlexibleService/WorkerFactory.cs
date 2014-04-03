@@ -6,6 +6,7 @@
 
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Jucardi.FlexibleService.Common;
 using Jucardi.FlexibleService.Common.Extensions;
 using System;
 using System.Collections.Generic;

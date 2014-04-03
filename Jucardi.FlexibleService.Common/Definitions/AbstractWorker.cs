@@ -14,8 +14,6 @@ namespace Jucardi.FlexibleService.Common
 		#region Fields
 
 		private Thread _executionThread  = null;
-		private string _connectionString = null;
-		private string _serviceBrokerUrl = null;
 		private int    _stopTimeout      = 5000;
 
 		#endregion
@@ -31,30 +29,6 @@ namespace Jucardi.FlexibleService.Common
 		public virtual bool IsRunning
 		{
 			get { return _executionThread != null && _executionThread.IsAlive; }
-		}
-
-		/// <summary>
-		/// Gets or sets the database connection string.
-		/// </summary>
-		/// <value>
-		/// The database connection string.
-		/// </value>
-		public string ConnectionString
-		{
-			get { return _connectionString; }
-			set { _connectionString = value; }
-		}
-
-		/// <summary>
-		/// Gets or sets the service broker URL.
-		/// </summary>
-		/// <value>
-		/// The service broker URL.
-		/// </value>
-		public string ServiceBrokerUrl
-		{
-			get { return _serviceBrokerUrl; }
-			set { _serviceBrokerUrl = value; }
 		}
 
 		/// <summary>

@@ -11,7 +11,7 @@ using Jucardi.FlexibleService.Common.Collections;
 using Jucardi.FlexibleService.Common.Log;
 using Jucardi.FlexibleService.Common.Serialization;
 
-namespace Jucardi.FlexibleService.Common.Extensions
+namespace Jucardi.FlexibleService.Common
 {
 	[XmlRoot("flexible-service-configuration")]
 	[Serializable]

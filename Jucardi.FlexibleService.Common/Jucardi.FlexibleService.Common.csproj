@@ -77,7 +77,7 @@
     <Compile Include="BaseWorkers\TimerWorker.cs" />
     <Compile Include="Definitions\Throttle.cs" />
     <Compile Include="Exceptions\WorkerException.cs" />
-    <Compile Include="Extensions\FlexibleServiceConfiguration.cs" />
+    <Compile Include="Configuration\FlexibleServiceConfiguration.cs" />
     <Compile Include="Extensions\ExtensionDiscover.cs" />
     <Compile Include="Extensions\ExtensionManager.cs" />
     <Compile Include="Extensions\ExtensionInfo.cs" />
