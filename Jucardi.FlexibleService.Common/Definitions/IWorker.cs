@@ -32,6 +32,6 @@ namespace Jucardi.FlexibleService.Common
 		/// <value>
 		/// The name.
 		/// </value>
-		string Name { get; set; }
+		string Name { get; }
 	}
 }

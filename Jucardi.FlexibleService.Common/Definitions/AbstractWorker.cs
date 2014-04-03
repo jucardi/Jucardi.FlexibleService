@@ -50,7 +50,7 @@ namespace Jucardi.FlexibleService.Common
 		/// <value>
 		/// The name.
 		/// </value>
-		public abstract string Name { get; set; }
+		public abstract string Name { get; }
 
 		#endregion
 

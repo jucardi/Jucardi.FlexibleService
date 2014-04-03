@@ -30,7 +30,7 @@ namespace Jucardi.FlexibleService.Common.Service
 		/// <value>
 		/// The logger.
 		/// </value>
-		protected static ILoggerEx Logger
+		private static ILoggerEx Logger
 		{
 			get { return LoggerProvider.GetLogger(typeof (Program)); }
 		}

@@ -32,7 +32,6 @@ namespace Jucardi.SampleWorker
 		public override string Name
 		{
 			get { return _name; }
-			set { _name = value; }
 		}
 
 		#endregion

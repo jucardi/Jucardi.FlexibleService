@@ -29,7 +29,6 @@ namespace Jucardi.FlexibleService.Common.BaseWorkers
 
 		#endregion
 
-
 		#region Logger
 
 		/// <summary>
@@ -38,7 +37,7 @@ namespace Jucardi.FlexibleService.Common.BaseWorkers
 		/// <value>
 		/// The logger.
 		/// </value>
-		protected static ILoggerEx Logger
+		private static ILoggerEx Logger
 		{
 			get { return LoggerProvider.GetLogger(typeof(QueueWorker)); }
 		}
