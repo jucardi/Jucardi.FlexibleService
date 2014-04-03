@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<flexible-service-configuration>
+  <!-- 
+  Property set to be assigned to all workers as default values. 
+  
+  If a worker does not have a property with the give name and type of one of these properties specified below, a
+  warnining will be logged in the log file.
+  -->
+  <common-values>
+    <property name="Interval" value="20000" class="System.Int32"/>
+  </common-values>
+
+  <!--
+  In the following section, every worker that will be executed has to be specified here, with the assembly where the worker is,
+  the class which implements the IWorker interface and the set of properties that will be set to thw worker's instance.
+  
+  If a property is specified here which was already present in the common values, that common value will be replaced with the
+  specific worker value providen.
+  -->
+  <types>
+    <add name="WorkerName" assembly="Extensions/Jucardi.SampleWorker.dll" class="Jucardi.SampleWorker.TestWorker">
+      <properties>
+        <property name="Interval" value="20000" class="System.Int32"/>
+      </properties>
+    </add>
+  </types>
+
+  <!--
+  The following section is entirely a configuration section for the third party library log4net, any documentation about this library
+  can be found here: https://logging.apache.org/log4net/
+  -->
+  <logger-configuration>
+    <log4net>
+      <appender name="ConsoleAppender" type="log4net.Appender.ConsoleAppender">
+        <layout type="log4net.Layout.PatternLayout">
+          <IgnoresException value="False" />
+          <conversionPattern value="[%-11level] %date %message%newline" />
+        </layout>
+      </appender>
+      <appender name="FileAppender" type="log4net.Appender.RollingFileAppender">
+        <file value="Log/log.txt" />
+        <appendToFile value="true" />
+        <rollingStyle value="Size" />
+        <maxSizeRollBackups value="10" />
+        <maximumFileSize value="1MB" />
+        <staticLogFileName value="true" />
+        <lockingModel type="log4net.Appender.FileAppender+MinimalLock" />
+        <layout type="log4net.Layout.PatternLayout">
+          <IgnoresException value="False" />
+          <conversionPattern value="[%date] [%-5level] [%logger | %thread] - %message%newline%exception" />
+        </layout>
+      </appender>
+      <!--<appender name="UdpAppender" type="log4net.Appender.UdpAppender">
+      <localPort value="8050" />
+      <remoteAddress value="127.0.0.1" />
+      <remotePort value="8050" />
+      <layout type="log4net.Layout.XmlLayout, log4net" />
+    </appender>-->
+      <root>
+        <level value="DEBUG" />
+        <appender-ref ref="ConsoleAppender" />
+        <appender-ref ref="FileAppender" />
+        <!--<appender-ref ref="UdpAppender" />-->
+      </root>
+    </log4net>
+  </logger-configuration>
+</flexible-service-configuration>
