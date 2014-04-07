@@ -12,6 +12,7 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
 using Jucardi.FlexibleService.Common.Extensions;
+using Jucardi.FlexibleService.Common.Serialization;
 
 namespace Jucardi.FlexibleService.Common.Collections
 {
@@ -120,6 +121,16 @@ namespace Jucardi.FlexibleService.Common.Collections
 		public void Add(string name, ExtensionInfo info)
 		{
 			this.list[name] = info;
+		}
+
+		/// <summary>
+		/// Adds the range.
+		/// </summary>
+		/// <param name="range">The range.</param>
+		public void AddRange(IEnumerable<ExtensionInfo> range)
+		{
+			foreach (ExtensionInfo eInfo in range)
+				this.list[eInfo.Name] = eInfo;
 		}
 
 		/// <summary>

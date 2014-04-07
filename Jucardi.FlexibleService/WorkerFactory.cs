@@ -27,12 +27,13 @@ namespace Jucardi.FlexibleService
 
 		#region Fields
 
-		private static List<string>                      _assemblyDirectories   = new List<string>();
-		private static FileSystemWatcher                 _assemblyWatcher       = new FileSystemWatcher();
-		private static FileSystemWatcher                 _configurationWatcher  = new FileSystemWatcher();
-		private static Dictionary<string, AppDomain>     _executingDomains      = new Dictionary<string, AppDomain>();
-		private static Dictionary<string, WorkerProcess> _executingProcesses    = new Dictionary<string, WorkerProcess>();
-		private static bool                              _initialized           = false;
+		private static List<string>                      _assemblyDirectories       = new List<string>();
+		private static FileSystemWatcher                 _assemblyWatcher           = new FileSystemWatcher();
+		private static FileSystemWatcher                 _baseConfigurationWatcher  = new FileSystemWatcher();
+		private static FileSystemWatcher                 _configurationFolder       = new FileSystemWatcher();
+		private static Dictionary<string, AppDomain>     _executingDomains          = new Dictionary<string, AppDomain>();
+		private static Dictionary<string, WorkerProcess> _executingProcesses        = new Dictionary<string, WorkerProcess>();
+		private static bool                              _initialized               = false;
 
 		#endregion
 
@@ -62,8 +63,6 @@ namespace Jucardi.FlexibleService
 			_assemblyDirectories.Add(DEFAULT_PATH);
 			_assemblyDirectories.Add(AppDomain.CurrentDomain.BaseDirectory);
 			_assemblyDirectories.Add(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
-
-			//_configuration.Load(ConfigurationManager.GetSection(WORKERS_CONFIG_ELEMENT_NAME));
 		}
 
 		#endregion
@@ -280,6 +279,7 @@ namespace Jucardi.FlexibleService
 			if (_initialized)
 				return;
 
+			// Extensions monitor
 			_assemblyWatcher.Path   = Path.GetFullPath(DEFAULT_PATH);
 			_assemblyWatcher.Filter = "*.dll";
 
@@ -288,16 +288,28 @@ namespace Jucardi.FlexibleService
 			_assemblyWatcher.Deleted += OnChanged;
 			_assemblyWatcher.Renamed += OnRenamed;
 
-			_configurationWatcher.Path   = AppDomain.CurrentDomain.BaseDirectory;
-			_configurationWatcher.Filter = FlexibleServiceConfiguration.CONFIGURATION_FILE;
+			// Base configuration Monitor
+			_baseConfigurationWatcher.Path   = AppDomain.CurrentDomain.BaseDirectory;
+			_baseConfigurationWatcher.Filter = FlexibleServiceConfiguration.CONFIGURATION_FILE;
 
-			_configurationWatcher.Created += OnConfigurationChanged;
-			_configurationWatcher.Changed += OnConfigurationChanged;
-			_configurationWatcher.Deleted += OnConfigurationChanged;
-			_configurationWatcher.Renamed += OnConfigurationChanged;
+			_baseConfigurationWatcher.Created += OnConfigurationChanged;
+			_baseConfigurationWatcher.Changed += OnConfigurationChanged;
+			_baseConfigurationWatcher.Deleted += OnConfigurationChanged;
+			_baseConfigurationWatcher.Renamed += OnConfigurationChanged;
 
-			_assemblyWatcher.EnableRaisingEvents      = true;
-			_configurationWatcher.EnableRaisingEvents = true;
+			// Extension configuration monitor
+			_configurationFolder.Path   = FlexibleServiceConfiguration.CONFIGURATION_PATH;
+			_configurationFolder.Filter = "*.xml";
+
+			_configurationFolder.Created += OnConfigurationChanged;
+			_configurationFolder.Changed += OnConfigurationChanged;
+			_configurationFolder.Deleted += OnConfigurationChanged;
+			_configurationFolder.Renamed += OnConfigurationChanged;
+
+			// Enable monitors
+			_assemblyWatcher.EnableRaisingEvents          = true;
+			_baseConfigurationWatcher.EnableRaisingEvents = true;
+			_configurationFolder.EnableRaisingEvents      = true;
 
 			_initialized = true;
 		}
