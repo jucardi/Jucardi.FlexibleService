@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <flexible-service-configuration>
+
+  <monitor-assemblies>false</monitor-assemblies>
   <!-- 
   Property set to be assigned to all workers as default values. 
   

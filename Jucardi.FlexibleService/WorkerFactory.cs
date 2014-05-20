@@ -17,323 +17,345 @@ using Jucardi.FlexibleService.Common.Log;
 
 namespace Jucardi.FlexibleService
 {
-	public static class WorkerFactory
-	{
-		#region Constants
+    public static class WorkerFactory
+    {
+        #region Constants
 
-		public const string DEFAULT_PATH = @".\Extensions";
+        public const string DEFAULT_PATH = @".\Extensions";
 
-		#endregion
+        #endregion
 
-		#region Fields
+        #region Fields
 
-		private static List<string>                      _assemblyDirectories       = new List<string>();
-		private static FileSystemWatcher                 _assemblyWatcher           = new FileSystemWatcher();
-		private static FileSystemWatcher                 _baseConfigurationWatcher  = new FileSystemWatcher();
-		private static FileSystemWatcher                 _configurationFolder       = new FileSystemWatcher();
-		private static Dictionary<string, AppDomain>     _executingDomains          = new Dictionary<string, AppDomain>();
-		private static Dictionary<string, WorkerProcess> _executingProcesses        = new Dictionary<string, WorkerProcess>();
-		private static bool                              _initialized               = false;
+        private static List<string>                      _assemblyDirectories      = new List<string>();
+        private static FileSystemWatcher                 _assemblyWatcher          = new FileSystemWatcher();
+        private static FileSystemWatcher                 _baseConfigurationWatcher = new FileSystemWatcher();
+        private static FileSystemWatcher                 _configurationFolder      = new FileSystemWatcher();
+        private static Dictionary<string, AppDomain>     _executingDomains         = new Dictionary<string, AppDomain>();
+        private static Dictionary<string, WorkerProcess> _executingProcesses       = new Dictionary<string, WorkerProcess>();
+        private static bool                              _initialized              = false;
+        private static bool                              _restartPending           = false;
 
-		#endregion
+        #endregion
 
-		#region Logger
+        #region Logger
 
-		/// <summary>
-		/// Gets the logger.
-		/// </summary>
-		/// <value>
-		/// The logger.
-		/// </value>
-		private static ILoggerEx Logger
-		{
-			get { return LoggerProvider.GetLogger(typeof(WorkerFactory)); }
-		}
+        /// <summary>
+        /// Gets the logger.
+        /// </summary>
+        /// <value>
+        /// The logger.
+        /// </value>
+        private static ILoggerEx Logger
+        {
+            get { return LoggerProvider.GetLogger(typeof(WorkerFactory)); }
+        }
 
-		#endregion
+        #endregion
 
-		#region Constructor
+        #region Constructor
 
-		/// <summary>
-		/// Initializes the <see cref="WorkerFactory"/> class.
-		/// </summary>
-		static WorkerFactory()
-		{
-			AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(OnAssemblyResolve);
-			_assemblyDirectories.Add(DEFAULT_PATH);
-			_assemblyDirectories.Add(AppDomain.CurrentDomain.BaseDirectory);
-			_assemblyDirectories.Add(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
-		}
+        /// <summary>
+        /// Initializes the <see cref="WorkerFactory"/> class.
+        /// </summary>
+        static WorkerFactory()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(OnAssemblyResolve);
+            _assemblyDirectories.Add(DEFAULT_PATH);
+            _assemblyDirectories.Add(AppDomain.CurrentDomain.BaseDirectory);
+            _assemblyDirectories.Add(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
+        }
 
-		#endregion
+        #endregion
 
-		#region Event Handlers
+        #region Event Handlers
 
-		/// <summary>
-		/// Called when assembly resolve is required.
-		/// </summary>
-		/// <param name="sender">The sender.</param>
-		/// <param name="args">The <see cref="System.ResolveEventArgs"/> instance containing the event data.</param>
-		/// <returns>The assembly object.</returns>
-		private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
-		{
-			string name = string.Format(CultureInfo.InvariantCulture, "{0}.dll", args.Name.Split(',')[0]);
+        /// <summary>
+        /// Called when assembly resolve is required.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="args">The <see cref="System.ResolveEventArgs"/> instance containing the event data.</param>
+        /// <returns>The assembly object.</returns>
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            string name = string.Format(CultureInfo.InvariantCulture, "{0}.dll", args.Name.Split(',')[0]);
 
-			// Resolve extension assemblies dependencies path.
-			foreach (string directory in _assemblyDirectories)
-			{
-				string path = Path.GetFullPath(Path.Combine(directory, name));
+            // Resolve extension assemblies dependencies path.
+            foreach (string directory in _assemblyDirectories)
+            {
+                string path = Path.GetFullPath(Path.Combine(directory, name));
 
-				if (File.Exists(path))
-					return Assembly.LoadFile(path);
-			}
+                if (!File.Exists(path))
+                    continue;
 
-			return null;
-		}
+                byte[] assemblyRawData = File.ReadAllBytes(path);
+                return Assembly.Load(assemblyRawData);
+            }
 
-		/// <summary>
-		/// Handles the Renamed event of the _assemblyWatcher control.
-		/// </summary>
-		/// <param name="sender">The source of the event.</param>
-		/// <param name="e">The <see cref="RenamedEventArgs"/> instance containing the event data.</param>
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		private static void OnRenamed(object sender, RenamedEventArgs e)
-		{
-			StopAssembly(e.OldFullPath);
-			ReloadAssembly(e.FullPath);
-		}
+            return null;
+        }
 
-		/// <summary>
-		/// Handles the Changed event of the _assemblyWatcher control.
-		/// </summary>
-		/// <param name="sender">The source of the event.</param>
-		/// <param name="e">The <see cref="FileSystemEventArgs" /> instance containing the event data.</param>
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		private static void OnChanged(object sender, FileSystemEventArgs e)
-		{
-			StopAssembly(e.FullPath);
-			ReloadAssembly(e.FullPath);
-		}
+        /// <summary>
+        /// Handles the Renamed event of the _assemblyWatcher control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RenamedEventArgs"/> instance containing the event data.</param>
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        private static void OnRenamed(object sender, RenamedEventArgs e)
+        {
+            StopAssembly(e.OldFullPath);
+            ReloadAssembly(e.FullPath);
+        }
 
-		/// <summary>
-		/// Called when [configuration changed].
-		/// </summary>
-		/// <param name="sender">The sender.</param>
-		/// <param name="e">The <see cref="FileSystemEventArgs"/> instance containing the event data.</param>
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		private static void OnConfigurationChanged(object sender, FileSystemEventArgs e)
-		{
-			Stop();
-			Thread.Sleep(500);
-			FlexibleServiceConfiguration.Initialize();
-			Start();
-		}
+        /// <summary>
+        /// Handles the Changed event of the _assemblyWatcher control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="FileSystemEventArgs" /> instance containing the event data.</param>
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        private static void OnChanged(object sender, FileSystemEventArgs e)
+        {
+            StopAssembly(e.FullPath);
+            ReloadAssembly(e.FullPath);
+        }
 
-		/// <summary>
-		/// Handles the UnhandledException event of the domain control.
-		/// </summary>
-		/// <param name="sender">The source of the event.</param>
-		/// <param name="e">The <see cref="UnhandledExceptionEventArgs"/> instance containing the event data.</param>
-		private static void OnWorkerDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
-		{
-			AppDomain domain = sender as AppDomain;
+        /// <summary>
+        /// Called when [configuration changed].
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The <see cref="FileSystemEventArgs"/> instance containing the event data.</param>
+        private static void OnConfigurationChanged(object sender, FileSystemEventArgs e)
+        {
+            if (_restartPending)
+                return;
 
-			foreach (KeyValuePair<string, AppDomain> item in _executingDomains)
-			{
-				if (!domain.Equals(item.Value))
-					continue;
+            _restartPending = true;
+            Thread.Sleep(30000);
+            _restartPending = false;
 
-				try
-				{
-					StopAssembly(item.Key);
-				}
-				catch
-				{
-				}
+            Stop();
+            FlexibleServiceConfiguration.Initialize();
+            Start();
+        }
 
-				Thread.Sleep(30000);
-				ReloadAssembly(item.Key);
-				return;
-			}
-		}
+        /// <summary>
+        /// Handles the UnhandledException event of the domain control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="UnhandledExceptionEventArgs"/> instance containing the event data.</param>
+        private static void OnWorkerDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            AppDomain domain = sender as AppDomain;
 
-		#endregion
+            foreach (KeyValuePair<string, AppDomain> item in _executingDomains)
+            {
+                if (!domain.Equals(item.Value))
+                    continue;
 
-		#region Methods
+                try
+                {
+                    StopAssembly(item.Key);
+                }
+                catch
+                {
+                }
 
-		/// <summary>
-		/// Starts the execution of the workers
-		/// </summary>
-		public static void Start()
-		{
-			Initialize();
+                Thread.Sleep(30000);
+                ReloadAssembly(item.Key);
+                return;
+            }
+        }
 
-			if (FlexibleServiceConfiguration.Configuration.Types == null)
-				return;
+        #endregion
 
-			foreach (ExtensionInfo info in FlexibleServiceConfiguration.Configuration.Types)
-				StartWorker(info);
-		}
+        #region Methods
 
-		/// <summary>
-		/// Stops the execution of all workers
-		/// </summary>
-		public static void Stop()
-		{
-			foreach (KeyValuePair<string, WorkerProcess> executingProcess in _executingProcesses)
-				executingProcess.Value.StopWorkers();
+        /// <summary>
+        /// Starts the execution of the workers
+        /// </summary>
+        public static void Start()
+        {
+            Initialize();
 
-			foreach (KeyValuePair<string, AppDomain> domain in _executingDomains)
-				UnloadDomain(domain.Value);
+            if (FlexibleServiceConfiguration.Configuration.Types == null)
+                return;
 
-			_executingProcesses.Clear();
-			_executingDomains.Clear();
-		}
+            foreach (ExtensionInfo info in FlexibleServiceConfiguration.Configuration.Types)
+                StartWorker(info);
+        }
 
-		/// <summary>
-		/// Starts the assembly.
-		/// </summary>
-		/// <param name="info">The information.</param>
-		/// <returns>
-		///   <c>true</c> if the worker was successfully started, otherwise <c>false</c>
-		/// </returns>
-		public static bool StartWorker(ExtensionInfo info)
-		{
-			Logger.Info("Starting worker with name: {0}", info.Name);
+        /// <summary>
+        /// Stops the execution of all workers
+        /// </summary>
+        public static void Stop()
+        {
+            foreach (KeyValuePair<string, WorkerProcess> executingProcess in _executingProcesses)
+                executingProcess.Value.StopWorkers();
 
-			if (!File.Exists(Path.GetFullPath(info.AssemblyPath)))
-			{
-				Logger.Warn("Unable to start worker '{0}', the assembly {1} could not be found.", info.Name, Path.GetFileName(info.AssemblyPath));
-				return false;
-			}
+            foreach (KeyValuePair<string, AppDomain> domain in _executingDomains)
+                UnloadDomain(domain.Value);
 
-			WorkerProcess process = null;
+            _executingProcesses.Clear();
+            _executingDomains.Clear();
+        }
 
-			if (_executingProcesses.ContainsKey(Path.GetFullPath(info.AssemblyPath)))
-			{
-				Logger.Debug("Executing domain for assembly '{0}' found, executing worker '{1}' in existing domain.", Path.GetFileName(info.AssemblyPath), info.Name);
-				process = _executingProcesses[info.AssemblyPath];
-			}
-			else
-			{
-				Logger.Debug("Creating domain for assembly '{0}'", info.AssemblyPath);
-				Type           remoteType = typeof(WorkerProcess);
-				AppDomainSetup domainInfo = new AppDomainSetup();
+        /// <summary>
+        /// Starts the assembly.
+        /// </summary>
+        /// <param name="info">The information.</param>
+        /// <returns>
+        ///   <c>true</c> if the worker was successfully started, otherwise <c>false</c>
+        /// </returns>
+        public static bool StartWorker(ExtensionInfo info)
+        {
+            try
+            {
+                Logger.Info("Starting worker with name: {0}", info.Name);
 
-				// Prepares a different domain for extension assemblies search. This isolates the loaded assemblies from the application domain.
-				domainInfo.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
+                if (!File.Exists(Path.GetFullPath(info.AssemblyPath)))
+                {
+                    Logger.Warn("Unable to start worker '{0}', the assembly {1} could not be found.", info.Name, Path.GetFileName(info.AssemblyPath));
+                    return false;
+                }
 
-				AppDomain     domain  = AppDomain.CreateDomain(Guid.NewGuid().ToString().GetHashCode().ToString("x"), null, domainInfo);
-				process = (WorkerProcess)domain.CreateInstanceAndUnwrap(remoteType.Assembly.FullName, remoteType.FullName);
+                WorkerProcess process = null;
 
-				domain.UnhandledException += OnWorkerDomainUnhandledException;
-				_executingDomains[Path.GetFullPath(info.AssemblyPath)]   = domain;
-				_executingProcesses[Path.GetFullPath(info.AssemblyPath)] = process;
-			}
+                if (_executingProcesses.ContainsKey(info.AssemblyPath))
+                {
+                    Logger.Debug("Executing domain for assembly '{0}' found, executing worker '{1}' in existing domain.", Path.GetFileName(info.AssemblyPath), info.Name);
+                    process = _executingProcesses[info.AssemblyPath];
+                }
+                else
+                {
+                    Logger.Debug("Creating domain for assembly '{0}'", info.AssemblyPath);
+                    Type remoteType = typeof(WorkerProcess);
+                    AppDomainSetup domainInfo = new AppDomainSetup();
 
-			process.ExecuteWorker(info);
-			return true;
-		}
+                    // Prepares a different domain for extension assemblies search. This isolates the loaded assemblies from the application domain.
+                    domainInfo.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
 
-		/// <summary>
-		/// Reloads the assembly.
-		/// </summary>
-		/// <param name="path">The path.</param>
-		private static void ReloadAssembly(string path)
-		{
-			Logger.Info("Reloading assembly {0}", path);
+                    AppDomain domain = AppDomain.CreateDomain(Guid.NewGuid().ToString().GetHashCode().ToString("x"), null, domainInfo);
+                    process = (WorkerProcess)domain.CreateInstanceAndUnwrap(remoteType.Assembly.FullName, remoteType.FullName);
 
-			foreach (ExtensionInfo info in FlexibleServiceConfiguration.Configuration.Types)
-			{
-				if (string.Equals(Path.GetFullPath(info.AssemblyPath), Path.GetFullPath(path), StringComparison.InvariantCultureIgnoreCase))
-					StartWorker(info);
-			}
-		}
+                    domain.UnhandledException += OnWorkerDomainUnhandledException;
+                    _executingDomains[Path.GetFullPath(info.AssemblyPath)] = domain;
+                    _executingProcesses[Path.GetFullPath(info.AssemblyPath)] = process;
+                }
 
-		/// <summary>
-		/// Stops the assembly.
-		/// </summary>
-		/// <param name="file">The file.</param>
-		private static void StopAssembly(string file)
-		{
-			Logger.Info("Stopping the execution of the assembly {0}", Path.GetFileName(file));
+                process.ExecuteWorker(info);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Unable to start worker", info.Name);
+            }
 
-			if (_executingProcesses.ContainsKey(file))
-			{
-				_executingProcesses[file].StopWorkers();
-				_executingProcesses.Remove(file);
-			}
+            return true;
+        }
 
-			if (_executingDomains.ContainsKey(file))
-			{
-				UnloadDomain(_executingDomains[file]);
-				_executingDomains.Remove(file);
-			}
-		}
+        /// <summary>
+        /// Reloads the assembly.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        private static void ReloadAssembly(string path)
+        {
+            Logger.Info("Reloading assembly {0}", path);
 
-		/// <summary>
-		/// Initializes this instance.
-		/// </summary>
-		public static void Initialize()
-		{
-			if (_initialized)
-				return;
+            foreach (ExtensionInfo info in FlexibleServiceConfiguration.Configuration.Types)
+            {
+                if (string.Equals(Path.GetFullPath(info.AssemblyPath), Path.GetFullPath(path), StringComparison.InvariantCultureIgnoreCase))
+                    StartWorker(info);
+            }
+        }
 
-			// Extensions monitor
-			_assemblyWatcher.Path   = Path.GetFullPath(DEFAULT_PATH);
-			_assemblyWatcher.Filter = "*.dll";
+        /// <summary>
+        /// Stops the assembly.
+        /// </summary>
+        /// <param name="file">The file.</param>
+        private static void StopAssembly(string file)
+        {
+            Logger.Info("Stopping the execution of the assembly {0}", Path.GetFileName(file));
 
-			_assemblyWatcher.Created += OnChanged;
-			_assemblyWatcher.Changed += OnChanged;
-			_assemblyWatcher.Deleted += OnChanged;
-			_assemblyWatcher.Renamed += OnRenamed;
+            if (_executingProcesses.ContainsKey(file))
+            {
+                _executingProcesses[file].StopWorkers();
+                _executingProcesses.Remove(file);
+            }
 
-			// Base configuration Monitor
-			_baseConfigurationWatcher.Path   = AppDomain.CurrentDomain.BaseDirectory;
-			_baseConfigurationWatcher.Filter = FlexibleServiceConfiguration.CONFIGURATION_FILE;
+            if (_executingDomains.ContainsKey(file))
+            {
+                UnloadDomain(_executingDomains[file]);
+                _executingDomains.Remove(file);
+            }
+        }
 
-			_baseConfigurationWatcher.Created += OnConfigurationChanged;
-			_baseConfigurationWatcher.Changed += OnConfigurationChanged;
-			_baseConfigurationWatcher.Deleted += OnConfigurationChanged;
-			_baseConfigurationWatcher.Renamed += OnConfigurationChanged;
+        /// <summary>
+        /// Initializes this instance.
+        /// </summary>
+        public static void Initialize()
+        {
+            if (_initialized)
+                return;
 
-			// Extension configuration monitor
-			_configurationFolder.Path   = FlexibleServiceConfiguration.CONFIGURATION_PATH;
-			_configurationFolder.Filter = "*.xml";
+            // Extensions monitor
+            if (FlexibleServiceConfiguration.Configuration.MonitorAssemblies)
+            {
+                _assemblyWatcher.Path = Path.GetFullPath(DEFAULT_PATH);
+                _assemblyWatcher.Filter = "*.dll";
 
-			_configurationFolder.Created += OnConfigurationChanged;
-			_configurationFolder.Changed += OnConfigurationChanged;
-			_configurationFolder.Deleted += OnConfigurationChanged;
-			_configurationFolder.Renamed += OnConfigurationChanged;
+                _assemblyWatcher.Created += OnChanged;
+                _assemblyWatcher.Changed += OnChanged;
 
-			// Enable monitors
-			_assemblyWatcher.EnableRaisingEvents          = true;
-			_baseConfigurationWatcher.EnableRaisingEvents = true;
-			_configurationFolder.EnableRaisingEvents      = true;
+                _assemblyWatcher.Deleted += OnChanged;
+                _assemblyWatcher.Renamed += OnRenamed;
 
-			_initialized = true;
-		}
+                _assemblyWatcher.EnableRaisingEvents = true;
+            }
 
-		/// <summary>
-		/// Unloads the domain.
-		/// </summary>
-		/// <param name="domain">The domain.</param>
-		private static void UnloadDomain(AppDomain domain)
-		{
-			Thread unloadThread = new Thread(new ParameterizedThreadStart(UnloadDomain));
-			unloadThread.Start(domain);
-		}
+            // Base configuration Monitor
+            _baseConfigurationWatcher.Path = AppDomain.CurrentDomain.BaseDirectory;
+            _baseConfigurationWatcher.Filter = FlexibleServiceConfiguration.CONFIGURATION_FILE;
 
-		/// <summary>
-		/// Unloads the domain.
-		/// </summary>
-		/// <param name="domain">The domain.</param>
-		private static void UnloadDomain(object obj)
-		{
-			AppDomain domain = obj as AppDomain;
-			AppDomain.Unload(domain);
-		}
+            _baseConfigurationWatcher.Created += OnConfigurationChanged;
+            _baseConfigurationWatcher.Changed += OnConfigurationChanged;
+            _baseConfigurationWatcher.Deleted += OnConfigurationChanged;
+            _baseConfigurationWatcher.Renamed += OnConfigurationChanged;
 
-		#endregion
-	}
+            // Extension configuration monitor
+            _configurationFolder.Path = FlexibleServiceConfiguration.CONFIGURATION_PATH;
+            _configurationFolder.Filter = "*.xml";
+
+            _configurationFolder.Created += OnConfigurationChanged;
+            _configurationFolder.Changed += OnConfigurationChanged;
+            _configurationFolder.Deleted += OnConfigurationChanged;
+            _configurationFolder.Renamed += OnConfigurationChanged;
+
+            // Enable monitors
+            _baseConfigurationWatcher.EnableRaisingEvents = true;
+            _configurationFolder.EnableRaisingEvents      = true;
+
+            _initialized = true;
+        }
+
+        /// <summary>
+        /// Unloads the domain.
+        /// </summary>
+        /// <param name="domain">The domain.</param>
+        private static void UnloadDomain(AppDomain domain)
+        {
+            Thread unloadThread = new Thread(new ParameterizedThreadStart(UnloadDomain));
+            unloadThread.Start(domain);
+        }
+
+        /// <summary>
+        /// Unloads the domain.
+        /// </summary>
+        /// <param name="domain">The domain.</param>
+        private static void UnloadDomain(object obj)
+        {
+            AppDomain domain = obj as AppDomain;
+            AppDomain.Unload(domain);
+        }
+
+        #endregion
+    }
 }
